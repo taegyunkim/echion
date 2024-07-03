@@ -16,6 +16,8 @@
 
 #if defined PL_LINUX
 #include <time.h>
+#include <fcntl.h>
+#include <unistd.h>
 #elif defined PL_DARWIN
 #include <mach/clock.h>
 #include <mach/mach.h>
