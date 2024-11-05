@@ -15,7 +15,7 @@
 static unsigned int interval = 1000;
 
 // CPU Time mode
-static int cpu = 0;
+static int cpu = 1;
 
 // Native stack sampling
 static int native = 0;
