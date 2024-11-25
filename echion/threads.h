@@ -279,7 +279,7 @@ void ThreadInfo::unwind_tasks()
             }
 
             // Add the task name frame
-            stack->push_front(Frame::get(task.name));
+            stack->push_back(Frame::get(task.name));
 
             // Get the next task in the chain
             PyObject *task_origin = task.origin;
@@ -348,7 +348,15 @@ void ThreadInfo::sample(int64_t iid, PyThreadState *tstate, microsecond_t delta)
         for (auto &task_stack : current_tasks)
         {
             try {
-                auto &task_name = string_table.lookup(task_stack->front().get().name);
+                // Find the first frame where line == 0
+                auto it = task_stack->begin();
+                while (it != task_stack->end() && it->get().line != 0) {
+                    it++;
+                }
+                if (it == task_stack->end())
+                    throw StringTable::Error();
+
+                auto &task_name = string_table.lookup(it->get().name);
                 Renderer::get().render_task_begin(task_name);
             } catch (StringTable::Error &) {
                 Renderer::get().render_task_begin("[Unknown]");

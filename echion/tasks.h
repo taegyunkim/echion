@@ -19,6 +19,7 @@
 #endif
 
 #include <exception>
+#include <iostream>
 #include <mutex>
 #include <stack>
 #include <unordered_map>
@@ -168,6 +169,8 @@ TaskInfo::TaskInfo(TaskObj *task_addr)
     try
     {
         name = string_table.key(task.task_name);
+        std::cout << "Task name: " << string_table.lookup(name) << std::endl;
+
     }
     catch (StringTable::Error &)
     {
