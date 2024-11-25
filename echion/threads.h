@@ -350,7 +350,7 @@ void ThreadInfo::sample(int64_t iid, PyThreadState *tstate, microsecond_t delta)
             try {
                 // Find the first frame where line == 0
                 auto it = task_stack->begin();
-                while (it != task_stack->end() && it->get().line != 0) {
+                while (it != task_stack->end() && it->get().location.line != 0) {
                     it++;
                 }
                 if (it == task_stack->end())
