@@ -348,7 +348,15 @@ void ThreadInfo::sample(int64_t iid, PyThreadState *tstate, microsecond_t delta)
         for (auto &task_stack : current_tasks)
         {
             try {
-                auto &task_name = string_table.lookup(task_stack->front().get().name);
+                // Find the first frame where line == 0
+                auto it = task_stack->begin();
+                while (it != task_stack->end() && it->get().location.line != 0) {
+                    it++;
+                }
+                if (it == task_stack->end())
+                    throw StringTable::Error();
+
+                auto &task_name = string_table.lookup(it->get().name);
                 Renderer::get().render_task_begin(task_name);
             } catch (StringTable::Error &) {
                 Renderer::get().render_task_begin("[Unknown]");
