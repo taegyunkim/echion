@@ -17,7 +17,7 @@
 
 #include <echion/frame.h>
 
-#define MAX_FRAMES 2048
+#define MAX_FRAMES 64
 
 class FrameStack : public std::deque<Frame::Ref>
 {
