@@ -111,6 +111,7 @@ pylong_to_llong(PyObject *long_addr)
     }
     ret *= sign;
   }
+  return ret;
 }
 #endif
 
