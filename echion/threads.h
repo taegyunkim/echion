@@ -16,6 +16,7 @@
 #include <unordered_map>
 
 #if defined PL_LINUX
+#include <map>
 #include <time.h>
 #elif defined PL_DARWIN
 #include <mach/clock.h>
@@ -28,6 +29,80 @@
 #include <echion/tasks.h>
 #include <echion/timing.h>
 
+#if defined PL_LINUX
+class ProcFdMap
+{
+private:
+    // TODO: cleanup threads that have exited. We can use similar mechanism
+    // as we do for thread_info_map, but that requires synchronization. Instead
+    // we can periodically check for threads that have invalid file descriptors
+    // and remove them.
+    std::unordered_map<unsigned long, int> tid_to_fd_;
+
+    static ProcFdMap &get_instance()
+    {
+        static ProcFdMap instance;
+        return instance;
+    }
+
+    ProcFdMap() = default;
+
+    ~ProcFdMap()
+    {
+        for (const auto &[tid, fd] : tid_to_fd_)
+        {
+            if (fd != -1)
+            {
+                close(fd);
+            }
+        }
+    }
+
+public:
+    static int get_fd(unsigned long thread_id)
+    {
+        auto &instance = get_instance();
+
+        auto it = instance.tid_to_fd_.find(thread_id);
+        if (it != instance.tid_to_fd_.end())
+        {
+            // Return the cached file descriptor
+            return it->second;
+        }
+
+        // Open the file and cache the file descriptor
+        char file_path[128];
+        int path_len = snprintf(file_path, sizeof(file_path), "/proc/self/task/%ld/stat", thread_id);
+        if (path_len < 0 || path_len >= sizeof(file_path))
+        {
+            return -1;
+        }
+        int fd = open(file_path, O_RDONLY | O_CLOEXEC);
+        if (fd != -1)
+        {
+            instance.tid_to_fd_[thread_id] = fd;
+        }
+        return fd;
+    }
+
+    static void remove_fd(unsigned long thread_id)
+    {
+        auto &instance = get_instance();
+
+        auto it = instance.tid_to_fd_.find(thread_id);
+        if (it != instance.tid_to_fd_.end())
+        {
+            if (it->second != -1)
+            {
+                close(it->second);
+            }
+            instance.tid_to_fd_.erase(it);
+        }
+    }
+};
+#endif
+
+// ----------------------------------------------------------------------------
 class ThreadInfo
 {
 public:
@@ -87,8 +162,10 @@ public:
 
 private:
 #if defined PL_LINUX
-    std::array<char, 1024> buffer; // Buffer for reading file contents
-#endif
+    static constexpr size_t buffer_size = 256;
+    std::array<char, buffer_size> buffer;
+#endif // PL_LINUX
+
     void unwind_tasks();
 };
 
@@ -115,25 +192,24 @@ void ThreadInfo::update_cpu_time()
 bool ThreadInfo::is_running()
 {
 #if defined PL_LINUX
-    static char file_path[128];
-    snprintf(file_path, sizeof(file_path), "/proc/self/task/%ld/stat", this->native_id);
 
-    // Open the file
-    int fd = open(file_path, O_RDONLY);
-    if (fd == -1) {
+    int fd = ProcFdMap::get_fd(this->native_id);
+    if (fd == -1)
+    {
         return false; // Failed to open file
     }
-
     // Read from the file
-    ssize_t bytes_read = read(fd, buffer.data(), buffer.size() - 1);
-    close(fd);
+    ssize_t bytes_read = pread(fd, buffer.data(), buffer.size() - 1, 0);
 
-    if (bytes_read <= 0) {
-        return false; // Failed to read or empty file
+    if (bytes_read <= 0)
+    {
+        // Failed to read or empty file, remove the file descriptor
+        ProcFdMap::remove_fd(this->native_id);
+        return false;
     }
 
     buffer[bytes_read] = '\0';
-    const char* p = strchr(buffer.data(), ')');
+    const char *p = strchr(buffer.data(), ')');
     return p != nullptr && strlen(p) > 2 && p[2] == 'R';
 
 #elif defined PL_DARWIN
@@ -317,7 +393,6 @@ void ThreadInfo::unwind_tasks()
 void ThreadInfo::sample(int64_t iid, PyThreadState *tstate, microsecond_t delta)
 {
 
-
     Renderer::get().render_thread_begin(tstate, name, delta, thread_id, native_id);
     if (cpu)
     {
@@ -327,7 +402,6 @@ void ThreadInfo::sample(int64_t iid, PyThreadState *tstate, microsecond_t delta)
         // If this thread isn't running, we observe it, but set CPU time to zero
         if (is_running())
             Renderer::get().render_cpu_time(cpu_time - previous_cpu_time);
-
     }
     unwind(tstate);
 
@@ -347,10 +421,13 @@ void ThreadInfo::sample(int64_t iid, PyThreadState *tstate, microsecond_t delta)
     {
         for (auto &task_stack : current_tasks)
         {
-            try {
+            try
+            {
                 auto &task_name = string_table.lookup(task_stack->front().get().name);
                 Renderer::get().render_task_begin(task_name);
-            } catch (StringTable::Error &) {
+            }
+            catch (StringTable::Error &)
+            {
                 Renderer::get().render_task_begin("[Unknown]");
             }
 
@@ -365,7 +442,7 @@ void ThreadInfo::sample(int64_t iid, PyThreadState *tstate, microsecond_t delta)
                 task_stack->render();
 
             // Hide for now, since we don't have good task rendering
-            //Renderer::get().render_cpu_time(delta);
+            // Renderer::get().render_cpu_time(delta);
         }
 
         current_tasks.clear();
