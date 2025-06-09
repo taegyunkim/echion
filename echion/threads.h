@@ -400,12 +400,14 @@ void ThreadInfo::sample(int64_t iid, PyThreadState* tstate, microsecond_t delta)
     // Asyncio tasks
     if (current_tasks.empty())
     {
+        std::cerr << "current_tasks empty" << std::endl;
         // If we don't have any asyncio tasks, we check that we don't have any
         // greenlets either. In this case, we print the ordinary thread stack.
         // With greenlets, we recover the thread stack from the active greenlet,
         // so if we don't skip here we would have a double print.
         if (current_greenlets.empty())
         {
+            std::cerr << "current_greenlets empty" << std::endl;
             // Print the PID and thread name
             Renderer::get().render_stack_begin(pid, iid, name);
             // Print the stack
@@ -446,6 +448,7 @@ void ThreadInfo::sample(int64_t iid, PyThreadState* tstate, microsecond_t delta)
     // Greenlet stacks
     if (!current_greenlets.empty())
     {
+        std::cerr << "rendering greenlet stacks current_greenlets not empty" << std::endl;
         for (auto& greenlet_stack : current_greenlets)
         {
             Renderer::get().render_task_begin(string_table.lookup(greenlet_stack->task_name),
@@ -467,6 +470,10 @@ void ThreadInfo::sample(int64_t iid, PyThreadState* tstate, microsecond_t delta)
         }
 
         current_greenlets.clear();
+    }
+    else
+    {
+        std::cerr << "current_greenlets empty, nothing to render" << std::endl;
     }
 }
 
