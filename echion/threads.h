@@ -289,6 +289,17 @@ void ThreadInfo::unwind_greenlets(PyThreadState *tstate,
                                   unsigned long native_id) {
   const std::lock_guard<std::mutex> guard(greenlet_info_map_lock);
 
+  std::cerr << "greenlet_info_map size: " << greenlet_info_map.size()
+            << std::endl;
+
+  for (auto &kv : greenlet_info_map) {
+    std::cerr << "greenlet_info_map key: " << kv.first << " value: "
+              << kv.second->name << std::endl;
+  }
+
+  std::cerr << "native_id " << native_id << std::endl;
+
+
   if (greenlet_thread_map.find(native_id) == greenlet_thread_map.end()) {
     std::cerr << "native_id " << native_id << " not found in greenlet_thread_map" << std::endl;
     return;
