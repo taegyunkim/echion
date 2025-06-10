@@ -489,6 +489,16 @@ for_each_thread(PyInterpreterState *interp,
     {
       const std::lock_guard<std::mutex> guard(thread_info_map_lock);
 
+      std::cerr << "threadin_info_map_size: " << thread_info_map.size()
+                << std::endl;
+
+      for (auto &kv : thread_info_map) {
+        std::cerr << "thread_info_map key: " << kv.first << " value: "
+                  << kv.second->name << std::endl;
+      }
+
+      std::cerr << "tstate.thread_id " << tstate.thread_id << std::endl;
+
       if (thread_info_map.find(tstate.thread_id) == thread_info_map.end()) {
         // If the threading module was not imported in the target then
         // we mistakenly take the hypno thread as the main thread. We
@@ -511,6 +521,8 @@ for_each_thread(PyInterpreterState *interp,
           }
           if (main_thread_tracked)
             continue;
+
+          std::cerr << "no main thread, thread_info_map.emplace for MainThread" << std::endl;
 
           thread_info_map.emplace(
               tstate.thread_id, std::make_unique<ThreadInfo>(
