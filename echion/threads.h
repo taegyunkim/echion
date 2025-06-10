@@ -290,8 +290,6 @@ void ThreadInfo::unwind_greenlets(PyThreadState *tstate,
   const std::lock_guard<std::mutex> guard(greenlet_info_map_lock);
 
   if (greenlet_thread_map.find(native_id) == greenlet_thread_map.end()) {
-    std::cerr << "native_id " << native_id << " not found in greenlet_thread_map"
-              << std::endl;
     return;
   }
 
