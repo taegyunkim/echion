@@ -489,15 +489,23 @@ for_each_thread(PyInterpreterState *interp,
     {
       const std::lock_guard<std::mutex> guard(thread_info_map_lock);
 
-      std::cerr << "threadin_info_map_size: " << thread_info_map.size()
-                << std::endl;
+      for (auto &kv: thread_info_map) {
+        if (kv.second->name == "MainThread") {
 
-      for (auto &kv : thread_info_map) {
-        std::cerr << "thread_info_map key: " << kv.first << " value: "
-                  << kv.second->name << std::endl;
+          if (kv.first == tstate.thread_id) {
+            std::cerr << "MainThread found in thread_info_map with key " << kv.first << std::endl;
+
+            std::cerr << "Stored native_id:" << kv.second->native_id << std::endl;
+
+#if PY_VERSION_HEX >= 0x030b0000
+            std::cerr << "Current native_id:" << tstate.native_thread_id << std::endl;
+#else
+            std::cerr << "Current native_id:" << getpid() << std::endl;
+#endif
+          }
+
+        }
       }
-
-      std::cerr << "tstate.thread_id " << tstate.thread_id << std::endl;
 
       if (thread_info_map.find(tstate.thread_id) == thread_info_map.end()) {
         // If the threading module was not imported in the target then
