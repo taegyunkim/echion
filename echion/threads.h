@@ -531,6 +531,8 @@ for_each_thread(PyInterpreterState *interp,
             continue;
 
           std::cerr << "no main thread, thread_info_map.emplace for MainThread" << std::endl;
+          std::cerr << "tstate.thread_id: " << tstate.thread_id << std::endl;
+          std::cerr << "native_id: " << native_id << std::endl;
 
           thread_info_map.emplace(
               tstate.thread_id, std::make_unique<ThreadInfo>(
