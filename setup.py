@@ -24,10 +24,10 @@ COLORS = [
     "-fdiagnostics-color=always" if PLATFORM == "linux" else "-fcolor-diagnostics"
 ]
 
+CFLAGS = ["-Og", "-g3"] if os.environ.get("BUILD_DEBUG") else []
+
 if PLATFORM == "darwin":
-    CFLAGS = ["-mmacosx-version-min=10.15"]
-else:
-    CFLAGS = []
+    CFLAGS += ["-mmacosx-version-min=10.15"]
 
 if DISABLE_NATIVE:
     CFLAGS += ["-DUNWIND_NATIVE_DISABLE"]
