@@ -20,8 +20,7 @@ class Frame;
 
 enum MetricType
 {
-    Time,
-    Memory
+    Time
 };
 
 class RendererInterface
@@ -283,15 +282,6 @@ public:
     }
 
     // ------------------------------------------------------------------------
-    void inline metric_memory(mojo_int_t value)
-    {
-        std::lock_guard<std::mutex> guard(lock);
-
-        event(MOJO_METRIC_MEMORY);
-        integer(value);
-    }
-
-    // ------------------------------------------------------------------------
     void inline string(mojo_ref_t key, const std::string& value) override
     {
         std::lock_guard<std::mutex> guard(lock);
@@ -325,14 +315,7 @@ public:
     };
     void render_stack_end(MetricType metric_type, uint64_t delta) override
     {
-        if (metric_type == MetricType::Time)
-        {
-            metric_time(cpu ? metric : delta);
-        }
-        else if (metric_type == MetricType::Memory)
-        {
-            metric_memory(delta);
-        }
+        metric_time(cpu ? metric : delta);
     };
     bool is_valid() override
     {
